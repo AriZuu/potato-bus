@@ -1,5 +1,5 @@
-Potato Queue - a simple MQTT client for Pico]OS
-===============================================
+Potato Bus - a simple MQTT client for Pico]OS
+=============================================
 
 This is a simple MQTT client for Pico]OS + LwIP.
 Currently it supports only QOS 0, as my need was
