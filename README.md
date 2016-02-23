@@ -18,5 +18,11 @@ library.
 
 For simple application example, see example.c
 
+I use mostly JSON as MQTT message format. To handle that
+there is a JSON parser included in microjson subdirectory.
+I found the parser from [here][1].
+
 (Why potato ? Well, I live in Lemi, Finland. There
 is a lot of potato business here)
+
+[1]: http://www.catb.org/esr/microjson/
