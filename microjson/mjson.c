@@ -302,7 +302,7 @@ static int json_internal_read_object(const char *cp,
 		    if (strcmp(cursor->attribute, attrbuf) == 0)
 			break;
 		}
-		if (cursor->attribute == NULL) {
+		if (cursor->attribute == NULL && cursor->type != t_ignore) {
 		    json_debug_trace((1,
 				      "Unknown attribute name '%s' (attributes begin with '%s').\n",
 				      attrbuf, attrs->attribute));
