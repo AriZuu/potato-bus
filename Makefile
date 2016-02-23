@@ -40,12 +40,13 @@ include $(RELROOT)make/common.mak
 TARGET = potato-bus
 
 SRC_TXT =	packet.c \
-		client.c
+		client.c \
+		microjson/mjson.c
 
 SRC_HDR =	potato-bus.h
 SRC_OBJ =
 CDEFINES += 
-DIR_USRINC += 
+DIR_USRINC +=  microjson
 
 MODULES += ../picoos-lwip
 # 

@@ -1,1 +1,1 @@
-DIR_MODINC +=	$(MOD)
+DIR_MODINC +=	$(MOD) $(MOD)/microjson
