@@ -740,6 +740,218 @@ int json_read_object(const char *cp, const struct json_attr_t *attrs,
     return st;
 }
 
+static int json_internal_print(char** out, 
+                               int* outleft,
+                               const char* fmt,
+                               ...)
+{
+    va_list ap;
+    int len;
+
+    va_start(ap, fmt);
+    len = vsnprintf(*out, *outleft, fmt, ap);
+    va_end(ap);
+
+    if (len > *outleft)
+	return JSON_ERR_BUFSMALL;
+
+    *out = *out + len;
+    *outleft -= len;
+    return 0;
+}
+
+static int json_internal_write_array(char** out,
+                                     const struct json_array_t* arr,
+                                     int* outleft);
+
+static int json_internal_write_object(char** out,
+                                      const struct json_attr_t* attrs,
+                                      int* outleft,
+				      const struct json_array_t *parent,
+				      int offset)
+{
+    const struct json_attr_t* cursor;
+    char *lptr;
+    int substatus;
+
+    substatus = json_internal_print(out, outleft, "{");
+    if (substatus != 0)
+   	return substatus;
+
+    for (cursor = attrs; cursor->attribute != NULL; cursor++) {
+
+    	substatus = json_internal_print(out, outleft, "\"%s\":", cursor->attribute);
+    	if (substatus != 0)
+   	    return substatus;
+	lptr = json_target_address(cursor, parent, offset);
+	switch (cursor->type) {
+	case t_integer:
+	    {
+		int tmp;
+		memcpy(&tmp, lptr, sizeof(int));
+    		substatus = json_internal_print(out, outleft, "%d", tmp);
+    		if (substatus != 0)
+   	    	    return substatus;
+	    }
+	    break;
+	case t_uinteger:
+	    {
+		unsigned int tmp;
+		memcpy(&tmp, lptr, sizeof(unsigned int));
+    		substatus = json_internal_print(out, outleft, "%u", tmp);
+    		if (substatus != 0)
+   	    	    return substatus;
+	    }
+	    break;
+	case t_time:
+	    break;
+	case t_real:
+	    {
+		double tmp;
+		memcpy(&tmp, lptr, sizeof(double));
+    		substatus = json_internal_print(out, outleft, "%lf", tmp);
+    		if (substatus != 0)
+   	    	    return substatus;
+	    }
+	    break;
+	case t_string:
+	    if (parent != NULL
+		&& parent->element_type != t_structobject
+		&& offset > 0)
+		return JSON_ERR_NOPARSTR;
+
+    	    substatus = json_internal_print(out, outleft, "\"%s\"", lptr);
+    	    if (substatus != 0)
+   	        return substatus;
+	    break;
+	case t_boolean:
+	    {
+		bool tmp;
+		memcpy(&tmp, lptr, sizeof(bool));
+    		substatus = json_internal_print(out, outleft, "%s", tmp ? "true" : "false");
+    		if (substatus != 0)
+   	    	    return substatus;
+	    }
+	    break;
+	case t_character:
+    	    substatus = json_internal_print(out, outleft, "\"%c\"", lptr[0]);
+    	    if (substatus != 0)
+   	   	return substatus;
+	    break;
+	case t_array:
+   	    substatus = json_internal_write_array(out, &cursor->addr.array, outleft);
+	    if (substatus != 0) 
+		return substatus;
+	    break;
+	case t_ignore:	/* silences a compiler warning */
+	case t_object:	/* silences a compiler warning */
+	case t_structobject:
+	    break;
+	case t_check:
+    	    substatus = json_internal_print(out, outleft, "\"%s\"", cursor->dflt.check);
+    	    if (substatus != 0)
+   	        return substatus;
+	    break;
+	}
+
+	if (cursor[1].attribute != NULL) {
+    	    substatus = json_internal_print(out, outleft, ",");
+    	    if (substatus != 0)
+   	        return substatus;
+	}
+    }
+
+    substatus = json_internal_print(out, outleft, "}");
+    if (substatus != 0)
+   	return substatus;
+    return 0;
+}
+
+static int json_internal_write_array(char** out,
+                                     const struct json_array_t* arr,
+                                     int* outleft)
+{
+    int substatus, offset, arrcount;
+    int maxlen;
+    int len;
+
+    substatus = json_internal_print(out, outleft, "[");
+    if (substatus != 0)
+   	return substatus;
+
+    maxlen = arr->maxlen;
+    if (arr->count != NULL)
+	maxlen = *(arr->count);
+
+    for (offset = 0; offset < maxlen; offset++) {
+	switch (arr->element_type) {
+	case t_string:
+            substatus = json_internal_print(out, outleft, "\"%s\"", arr->arr.strings.ptrs[offset]);
+	    if (substatus != 0)
+		return substatus;
+	    break;
+	case t_object:
+	case t_structobject:
+	    substatus =
+		json_internal_write_object(out, arr->arr.objects.subtype, outleft, arr,
+					  offset);
+	    if (substatus != 0)
+		return substatus;
+	    break;
+	case t_integer:
+            substatus = json_internal_print(out, outleft, "%d", arr->arr.integers.store[offset]);
+	    if (substatus != 0)
+		return substatus;
+	    break;
+	case t_uinteger:
+            substatus = json_internal_print(out, outleft, "%u", arr->arr.uintegers.store[offset]);
+	    if (substatus != 0)
+		return substatus;
+	case t_time:
+	    break;
+	case t_real:
+            substatus = json_internal_print(out, outleft, "%lf", arr->arr.reals.store[offset]);
+	    if (substatus != 0)
+		return substatus;
+	case t_boolean:
+            substatus = json_internal_print(out, outleft,
+ 					    "%s", arr->arr.booleans.store[offset] ? "true" : "false");
+	    if (substatus != 0)
+		return substatus;
+	case t_character:
+	case t_array:
+	case t_check:
+	case t_ignore:
+	    json_debug_trace((1, "Invalid array subtype.\n"));
+	    return JSON_ERR_SUBTYPE;
+	}
+
+    	if (offset < maxlen - 1) {
+    	    substatus = json_internal_print(out, outleft, ",");
+    	    if (substatus != 0)
+   	        return substatus;
+	}
+    }
+    substatus = json_internal_print(out, outleft, "]");
+    if (substatus != 0)
+   	return substatus;
+    return 0;
+}
+
+int json_write_array(char* buf,
+                     const struct json_array_t* arr,
+                     int bufsize)
+{
+    int left = bufsize;
+    return json_internal_write_array(&buf, arr, &left);
+}
+
+int json_write_object(char* buf, const struct json_attr_t* attrs, int bufsize)
+{
+    int left = bufsize;
+    return json_internal_write_object(&buf, attrs, &left, NULL, 0);
+}
+
 const /*@observer@*/ char *json_error_string(int err)
 {
     const char *errors[] = {
@@ -775,4 +987,3 @@ const /*@observer@*/ char *json_error_string(int err)
 }
 
 /* end */
-

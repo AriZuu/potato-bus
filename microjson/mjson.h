@@ -88,6 +88,8 @@ int json_read_object(const char *, const struct json_attr_t *,
 		     /*@null@*/const char **);
 int json_read_array(const char *, const struct json_array_t *,
 		    /*@null@*/const char **);
+int json_write_object(char*, const struct json_attr_t*, int bufsize);
+int json_write_array(char*, const struct json_array_t*, int bufsize);
 const /*@observer@*/char *json_error_string(int);
 
 void json_enable_debug(int, FILE *);
@@ -118,6 +120,7 @@ void json_enable_debug(int, FILE *);
 #define JSON_ERR_MISC		20	/* other data conversion error */
 #define JSON_ERR_BADNUM		21	/* error while parsing a numerical argument */
 #define JSON_ERR_NULLPTR	22	/* unexpected null value or attribute pointer */
+#define JSON_ERR_BUFSMALL	23	/* output buffer too small */
 
 /*
  * Use the following macros to declare template initializers for structobject
