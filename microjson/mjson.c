@@ -871,9 +871,8 @@ static int json_internal_write_array(char** out,
                                      const struct json_array_t* arr,
                                      int* outleft)
 {
-    int substatus, offset, arrcount;
+    int substatus, offset;
     int maxlen;
-    int len;
 
     substatus = json_internal_print(out, outleft, "[");
     if (substatus != 0)
