@@ -747,7 +747,7 @@ static int json_internal_print(char** out,
 {
     va_list ap;
     int len;
-
+    
     va_start(ap, fmt);
     len = vsnprintf(*out, *outleft, fmt, ap);
     va_end(ap);
@@ -907,17 +907,20 @@ static int json_internal_write_array(char** out,
             substatus = json_internal_print(out, outleft, "%u", arr->arr.uintegers.store[offset]);
 	    if (substatus != 0)
 		return substatus;
+	    break;
 	case t_time:
 	    break;
 	case t_real:
             substatus = json_internal_print(out, outleft, "%lf", arr->arr.reals.store[offset]);
 	    if (substatus != 0)
 		return substatus;
+	    break;
 	case t_boolean:
             substatus = json_internal_print(out, outleft,
  					    "%s", arr->arr.booleans.store[offset] ? "true" : "false");
 	    if (substatus != 0)
 		return substatus;
+	    break;
 	case t_character:
 	case t_array:
 	case t_check:
