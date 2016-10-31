@@ -217,9 +217,10 @@ void pbWriteHeader(PbPacket* pkt, int packetType, int packetFlags, int len)
     if (lenBytes > 4)
       break; // error
 
+    pkt->start--;
+
   } while (len > 0);
 
-  pkt->start--;
   *(pkt->start) = (packetType << 4) | packetFlags;
 }
 
