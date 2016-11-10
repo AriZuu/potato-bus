@@ -19,10 +19,19 @@ library.
 For simple application example, see example.c
 
 I use mostly JSON as MQTT message format. To handle that
-there is a JSON parser included in microjson subdirectory.
-I found the parser from [here][1].
+library includes a simple JSON parser/generator which does 
+not require use of dynamic memory allocation.
 
-(Why potato ? Well, I live in Lemi, Finland. There
+API for MQTT and JSON modules is documented [here][1].
+
+There is another JSON parser included in microjson subdirectory.
+I found the parser from [here][2]. It has been modified to
+optionally skip unrecognized attributes. There is also
+some support for generating json.
+
+(Why 'potato' ? Well, I live in Lemi, Finland. There
 is a lot of potato business here)
 
-[1]: http://www.catb.org/esr/microjson/
+[1]: http://arizuu.github.io/potato-bus
+[2]: http://www.catb.org/esr/microjson/
+
