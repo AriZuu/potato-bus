@@ -41,9 +41,10 @@ TARGET = potato-bus
 
 SRC_TXT =	packet.c \
 		client.c \
+		json.c \
 		microjson/mjson.c
 
-SRC_HDR =	potato-bus.h
+SRC_HDR =	potato-bus.h potato-json.h
 SRC_OBJ =
 CDEFINES += 
 DIR_USRINC +=  microjson
