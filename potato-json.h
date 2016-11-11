@@ -31,9 +31,17 @@
 #ifndef _POTATO_BUS_JSON_H
 #define _POTATO_BUS_JSON_H
 
+/** @defgroup json potato-bus JSON API
+ * Potato-bus includes a simple mallocless JSON parser & generator.
+ * @{
+ */
+
 #define MAX_DEPTH 4
 
-typedef enum _jsonToken {
+/**
+ * JSON token types.
+ */
+typedef enum jsonToken {
 
   JsonObject,
   JsonArray,
@@ -44,7 +52,10 @@ typedef enum _jsonToken {
   
 } JsonToken;
 
-typedef struct _jsonNode {
+/**
+ * Single node (object,  array or simple key / value) in json data. 
+ */
+typedef struct jsonNode {
 
   JsonToken token;
   char*     base;     // pointer to start of current node in json buf
@@ -54,11 +65,16 @@ typedef struct _jsonNode {
   size_t    keyLen;   // length of "key"
   int       values;   // number of values in current node
 
-  struct _jsonContext*   context;
+  struct jsonContext*   context;
 
 } JsonNode;
 
-typedef struct _jsonContext  {
+/**
+ * JSON processing context. Contains storage
+ * for parser node stack and parser / generator
+ * state information.
+ */
+typedef struct jsonContext  {
 
   bool     error;
   JsonNode nodes[MAX_DEPTH]; 
@@ -85,9 +101,26 @@ typedef struct _jsonContext  {
 
 } JsonContext;
 
+/**
+ * Start json parsing. Function returns pointer
+ * to root token, which can be used as argument
+ * for other parser calls.
+ */
 JsonNode* jsonParse(JsonContext* ctx, char* json);
-void jsonReset(JsonNode* node);
+
+/**
+ * Get next json node from input string.
+ */
 JsonNode* jsonNext(JsonNode* parent);
+
+/**
+ * Reset json node iterator back to beginning.
+ */
+void jsonReset(JsonNode* node);
+
+/**
+ * Find json node with given attribute name.
+ */
 JsonNode* jsonFind(JsonNode* parent, const char* key);
 bool jsonIsObject(JsonNode* node);
 bool jsonIsArray(JsonNode* node);
@@ -110,4 +143,7 @@ void jsonWriteDouble(JsonNode* node, double value);
 void jsonWriteString(JsonNode* node, const char* value);
 
 bool jsonFailed(JsonContext* ctx);
+
+/** @} */
+
 #endif /* _POTATO_BUS_JSON_H */

@@ -42,6 +42,7 @@
  * <b> Table Of Contents </b>
  * - @ref client
  * - @ref packet
+ * - @ref json
  * @section overview Overview
  * This library contains a simple MQTT client implementation for pico]OS, but
  * parts of it might be useful in other context also. 
