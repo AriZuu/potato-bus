@@ -186,6 +186,8 @@ JsonNode* jsonParse(JsonContext* ctx, char* json)
 
   if (*json == '[') {
 
+    root = ctx->nodes;
+
     root->context = ctx;
     root->base = json;
     root->pos = root->base;
