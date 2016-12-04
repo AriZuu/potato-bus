@@ -105,16 +105,26 @@ typedef struct jsonContext  {
  * Start json parsing. Function returns pointer
  * to root token, which can be used as argument
  * for other parser calls.
+ * @param ctx    Pointer to JsonContext object.
+ * @param json   Character string containing json to be parsed.
+ *               Note that parser modifies the string when it
+ *               temporarily null-terminates values.
+ * 
+ * @sa jsonNext, jsonReset, jsonFind
  */
 JsonNode* jsonParse(JsonContext* ctx, char* json);
 
 /**
  * Get next json node from input string.
+ * 
+ * @sa jsonReset
  */
 JsonNode* jsonNext(JsonNode* parent);
 
 /**
  * Reset json node iterator back to beginning.
+ *
+ * @sa jsonNext
  */
 void jsonReset(JsonNode* node);
 
@@ -122,26 +132,105 @@ void jsonReset(JsonNode* node);
  * Find json node with given attribute name.
  */
 JsonNode* jsonFind(JsonNode* parent, const char* key);
+
+/**
+ * Check if current node is json object.
+ */
 bool jsonIsObject(JsonNode* node);
+
+/**
+ * Check if current node is json array.
+ */
 bool jsonIsArray(JsonNode* node);
+
+/**
+ * Check if current node is a null value.
+ */
 bool jsonIsNull(JsonNode* node);
+
+/**
+ * Check if current node is a string value.
+ */
 bool jsonIsString(JsonNode* node);
+
+/**
+ * Check if current node is numeric value.
+ */
 bool jsonIsNumber(JsonNode* node);
+
+/**
+ * Read json attribute key.
+ */
 const char* jsonReadKey(JsonNode* node);
+
+/**
+ * Read json string attribute value.
+ */
 const char* jsonReadString(JsonNode* node);
+
+/**
+ * Read json integer attribute value.
+ */
 int jsonReadInteger(JsonNode* node);
+
+/**
+ * Read json float/double attribute value.
+ */
 double jsonReadDouble(JsonNode* node);
 
+/**
+ * Initialize json generator.
+ * @param ctx             Pointer to JsonContext object.
+ * @param outputBuf       Output character buffer.
+ * @param outputBufSizeof Sizeof output buffer.
+ */
 JsonNode* jsonGenerate(JsonContext* ctx, char* outputBuf, int outputBufSizeof);
+
+/**
+ * Flush all pending json objects to output.
+ * Must be called at least once.
+ */
 void jsonGenerateFlush(JsonNode* node);
+
+/**
+ * Start writing new json object.
+ */
 JsonNode* jsonStartObject(JsonNode* node);
+
+/**
+ * Start writing new json array.
+ */
 JsonNode* jsonStartArray(JsonNode* node);
+
+/**
+ * Write json attribute key.
+ */
 void jsonWriteKey(JsonNode* node, const char* key);
+
+/**
+ * Write json null value.
+ */
 void jsonWriteNull(JsonNode* node);
+
+/**
+ * Write json integer value.
+ */
 void jsonWriteInteger(JsonNode* node, int value);
+
+/**
+ * Write json double/float value.
+ */
 void jsonWriteDouble(JsonNode* node, double value);
+
+/**
+ * Write json string value.
+ */
 void jsonWriteString(JsonNode* node, const char* value);
 
+/**
+ * Check if there have been any errors during parsing or
+ * generation.
+ */
 bool jsonFailed(JsonContext* ctx);
 
 /** @} */
