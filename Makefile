@@ -49,7 +49,7 @@ SRC_OBJ =
 CDEFINES += 
 DIR_USRINC +=  microjson
 
-MODULES += ../picoos-lwip
+MODULES += ../picoos-micro ../picoos-lwip ../picoos-mbedtls
 # 
 # Set output directory.
 #

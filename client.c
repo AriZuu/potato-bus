@@ -28,14 +28,25 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <picoos.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <unistd.h>
 
 #include <string.h>
+
+#ifdef USE_UNIX_SOCKETS
+
+#include <sys/socket.h>
+#include <netdb.h>
+#include <netinet/in.h>
+
+#else
+
+#include <picoos.h>
 #include <picoos-lwip.h>
+
+#endif
 
 #include "potato-bus.h"
 
@@ -55,7 +66,7 @@ int pbWritePacket(PbClient* client, PbPacket* pkt)
     return PB_TOOBIG;
 
   int len = pbLength(pkt);
-  if (write(client->sock, pkt->start, len) != len) {
+  if (client->writePacket(client, pkt->start, len) != len) {
 
     close(client->sock);
     client->sock = -1;
@@ -74,7 +85,7 @@ int pbReadPacket(PbClient* client)
 
 // Read header
 
-  if (read(client->sock, ptr, 1) != 1) {
+  if (client->readPacket(client, ptr, 1) != 1) {
  
     return PB_TIMEOUT;
   }
@@ -86,7 +97,7 @@ int pbReadPacket(PbClient* client)
 
   do {
 
-    if (read(client->sock, ptr, 1) != 1) {
+    if (client->readPacket(client, ptr, 1) != 1) {
 
       return PB_NETWORK;
     }
@@ -115,7 +126,7 @@ int pbReadPacket(PbClient* client)
 
     int got;
 
-    while ((got = read(client->sock, ptr, len)) > 0) {
+    while ((got = client->readPacket(client, ptr, len)) > 0) {
     
       if (got == -1)
         return PB_NETWORK;
@@ -138,6 +149,21 @@ int pbReadPacket(PbClient* client)
   // Put pointer back to packet start.
   client->packet.ptr = client->packet.start;
   return type;
+}
+
+static int writePlainPacket(PbClient* client, const unsigned char* buf, size_t len)
+{
+  return write(client->sock, buf, len);
+}
+
+static int readPlainPacket(PbClient* client, unsigned char* buf, size_t len)
+{
+  return read(client->sock, buf, len);
+}
+
+static int closePlainConnection(PbClient* client)
+{
+  return close(client->sock);
 }
 
 int pbConnect(PbClient* client, const char* host, const char* service, PbConnect* arg)
@@ -193,6 +219,10 @@ int pbConnect(PbClient* client, const char* host, const char* service, PbConnect
     setsockopt(client->sock, SOL_SOCKET, SO_RCVTIMEO, (char *)&tmo, sizeof(struct timeval));
   }
 
+  client->writePacket = writePlainPacket;
+  client->readPacket  = readPlainPacket;
+  client->closeConnection = closePlainConnection;
+
   int st;
 
   st = pbWriteConnect(&client->packet, arg);
@@ -207,6 +237,174 @@ int pbConnect(PbClient* client, const char* host, const char* service, PbConnect
   return PB_SUCCESS;
 }
 
+#if POTATO_TLS
+
+static int sslWrite(void* ctx, const unsigned char* buf, size_t len)
+{
+  PbClient* client = (PbClient*)ctx;
+
+  return write(client->sock, buf, len);
+}
+
+static int sslRead(void* ctx, unsigned char*buf, size_t len)
+{
+  PbClient* client = (PbClient*)ctx;
+
+  return read(client->sock, buf, len);
+}
+
+static int writeSslPacket(PbClient* client, const unsigned char* buf, size_t len)
+{
+  return mbedtls_ssl_write(&client->ssl, buf, len);
+}
+
+static int readSslPacket(PbClient* client, unsigned char* buf, size_t len)
+{
+  return mbedtls_ssl_read(&client->ssl, buf, len);
+}
+
+static int closeSslConnection(PbClient* client)
+{
+  mbedtls_ssl_free(&client->ssl);
+  return close(client->sock);
+}
+
+int pbConnectSSL(PbClient*            client,
+                 const char*          host,
+                 const char*          service,
+                 PbConnect*           arg)
+{
+  struct addrinfo hints;
+  struct addrinfo *res, *resOrig;
+  int    i;
+  int    st;
+
+  memset(&hints, '\0', sizeof(hints));
+
+  hints.ai_family = PF_UNSPEC;
+  hints.ai_socktype = SOCK_STREAM;
+
+  i = getaddrinfo(host, service, &hints, &res);
+  if (i != 0) {
+
+    return PB_NETWORK;
+  }
+
+  resOrig = res;
+  client->sock = -1;
+
+  while (res) {
+
+    client->sock = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
+    if (client->sock >= 0) {
+
+      if (connect(client->sock, res->ai_addr, res->ai_addrlen) == 0)
+        break;
+
+      close(client->sock);
+      client->sock = -1;
+    }
+
+    res = res->ai_next;
+  }
+
+  freeaddrinfo(resOrig);
+ 
+  if (client->sock == -1)
+    return PB_NETWORK;
+
+  if (arg->keepAlive) {
+
+    struct timeval tmo;
+
+    tmo.tv_sec = arg->keepAlive / 2;
+    if (tmo.tv_sec == 0)
+      tmo.tv_usec = 500000;
+    else
+      tmo.tv_usec = 0;
+
+    setsockopt(client->sock, SOL_SOCKET, SO_RCVTIMEO, (char *)&tmo, sizeof(struct timeval));
+  }
+
+  mbedtls_ssl_init(&client->ssl);
+  st = mbedtls_ssl_set_hostname(&client->ssl, host);
+  if (st != 0)
+    return PB_MBEDTLS;
+
+  st = mbedtls_ssl_setup(&client->ssl, arg->sslConf);
+  if (st != 0)
+    return PB_MBEDTLS;
+
+  mbedtls_ssl_set_bio(&client->ssl, client, sslWrite, sslRead, NULL);
+
+  client->writePacket = writeSslPacket;
+  client->readPacket  = readSslPacket;
+  client->closeConnection = closeSslConnection;
+
+  st = pbWriteConnect(&client->packet, arg);
+  if (st < 0)
+    return st;
+
+  st = pbWritePacket(client, &client->packet);
+  if (st < 0)
+    return st;
+
+  pbWaitResponse(client, PB_MQ_CONNACK);
+  return PB_SUCCESS;
+}
+
+#endif
+
+
+int pbConnectURL(PbClient*            client,
+                 const char*          url,
+                 PbConnect*           arg)
+{
+  char* ptr;
+  const char* start;
+  bool  ssl;
+  const char* port;
+  char  host[64];
+  size_t   max;
+
+  ptr = strchr(url, ':');
+  if (ptr == NULL)
+    return PB_BADURL;
+
+  if (!strncmp(url, "mqtt", ptr - url) || !strncmp(url, "tcp", ptr - url))
+    ssl = false;
+  else if (!strncmp(url, "mqtts", ptr - url) || !strncmp(url, "ssl", ptr - url))
+    ssl = true;
+  else
+    return PB_BADURL;
+
+  start = ptr + 1;
+  if (strncmp(start, "//", 2))
+    return PB_BADURL;
+
+  start += 2;
+  ptr = strchr(start, ':');
+  if (ptr == NULL) {
+
+    strlcpy(host, start, sizeof(host));
+    port = ssl ? "8883" : "1883";
+  }
+  else {
+
+    max = ptr - start;
+    if (max > sizeof(host))
+      max = sizeof(host);
+
+    strlcpy(host, start, max);
+    port = ptr + 1;
+  }
+
+  if (ssl)
+    return pbConnectSSL(client, host, port, arg);
+
+  return pbConnect(client, host, port, arg);
+}
+
 int pbDisconnect(PbClient* client)
 {
   int st;
@@ -219,7 +417,7 @@ int pbDisconnect(PbClient* client)
   if (st < 0)
     return st;
 
-  close(client->sock);
+  client->closeConnection(client);
   client->sock = -1;
   return PB_SUCCESS;
 }

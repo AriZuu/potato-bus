@@ -31,6 +31,18 @@
 #ifndef _POTATO_BUS_H
 #define _POTATO_BUS_H
 
+#include "potato-cfg.h"
+
+#if POTATO_TLS
+
+#include "mbedtls/net.h"
+#include "mbedtls/ssl.h"
+#include "mbedtls/entropy.h"
+#include "mbedtls/ctr_drbg.h"
+#include "mbedtls/debug.h"
+
+#endif
+
 /**
  * @file    potato-bus.h
  * @brief   Include file for Potato Bus MQTT client
@@ -82,6 +94,9 @@
 /**
  * Return codes.
  */
+
+#define PB_BADURL  -6
+#define PB_MBEDTLS -5
 #define PB_TIMEOUT -4
 #define PB_NETWORK -3
 #define PB_TOOBIG  -2
@@ -136,6 +151,9 @@ typedef struct {
   const char* clientId;
   const char* user;
   const char* pass;
+#if POTATO_TLS
+  mbedtls_ssl_config*  sslConf;
+#endif
 } PbConnect;
   
 /**
@@ -163,12 +181,21 @@ typedef struct {
 /**
  * Client handle.
  */
-typedef struct {
+typedef struct pbClient {
   
   int sock;
   int packetId;
   PbPacket packet;
 
+  int (*writePacket)(struct pbClient*, const unsigned char*, size_t);
+  int (*readPacket)(struct pbClient*, unsigned char*, size_t);
+  int (*closeConnection)(struct pbClient*);
+
+#if POTATO_TLS
+
+  mbedtls_ssl_context      ssl;
+
+#endif
 } PbClient;
 
 
@@ -198,6 +225,27 @@ int pbReadPacket(PbClient* client);
  */
 int pbConnect(PbClient* client, const char* host, const char* service, PbConnect* arg);
 
+/**
+ * Connect to MQTT broker using SSL/TLS and wait for it to acknowledge new connection.
+ */
+int pbConnectSSL(PbClient*            client,
+                 const char*          host,
+                 const char*          service,
+                 PbConnect*           arg);
+/**
+ * Connect to MQTT broker using URL and wait for it to acknowledge new connection.
+ * URL should be like
+ *   mqtt://server[:port],
+ *   tcp://server[:port], 
+ *   mqtts://server[:port], 
+ *   ssl://server[:port] 
+ * 
+ * mqtt: is alias for tcp: and mqtts: is alias for ssl:.
+ * Default port is 1883 for tcp and 8883 for ssl.
+ */
+int pbConnectURL(PbClient*            client,
+                 const char*          url,
+                 PbConnect*           arg);
 /**
  * Send PING to broker and wait for response. Used to handle keepalive processing.
  */
