@@ -226,12 +226,18 @@ int pbConnect(PbClient* client, const char* host, const char* service, PbConnect
   int st;
 
   st = pbWriteConnect(&client->packet, arg);
-  if (st < 0)
+  if (st < 0) {
+
+    close(client->sock);
     return st;
+  }
 
   st = pbWritePacket(client, &client->packet);
-  if (st < 0)
+  if (st < 0) {
+
+    close(client->sock);
     return st;
+  }
 
   pbWaitResponse(client, PB_MQ_CONNACK);
   return PB_SUCCESS;
@@ -328,12 +334,18 @@ int pbConnectSSL(PbClient*            client,
 
   mbedtls_ssl_init(&client->ssl);
   st = mbedtls_ssl_set_hostname(&client->ssl, host);
-  if (st != 0)
+  if (st != 0) {
+
+    close(client->sock);
     return PB_MBEDTLS;
+  }
 
   st = mbedtls_ssl_setup(&client->ssl, arg->sslConf);
-  if (st != 0)
+  if (st != 0) {
+
+    close(client->sock);
     return PB_MBEDTLS;
+  }
 
   mbedtls_ssl_set_bio(&client->ssl, client, sslWrite, sslRead, NULL);
 
@@ -342,12 +354,18 @@ int pbConnectSSL(PbClient*            client,
   client->closeConnection = closeSslConnection;
 
   st = pbWriteConnect(&client->packet, arg);
-  if (st < 0)
+  if (st < 0) {
+
+    close(client->sock);
     return st;
+  }
 
   st = pbWritePacket(client, &client->packet);
-  if (st < 0)
+  if (st < 0) {
+
+    close(client->sock);
     return st;
+  }
 
   pbWaitResponse(client, PB_MQ_CONNACK);
   return PB_SUCCESS;
