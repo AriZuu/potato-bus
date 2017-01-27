@@ -194,6 +194,7 @@ typedef struct pbClient {
 #if POTATO_TLS
 
   mbedtls_ssl_context      ssl;
+  int                      sslResult;
 
 #endif
 } PbClient;

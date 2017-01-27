@@ -261,12 +261,24 @@ static int sslRead(void* ctx, unsigned char*buf, size_t len)
 
 static int writeSslPacket(PbClient* client, const unsigned char* buf, size_t len)
 {
-  return mbedtls_ssl_write(&client->ssl, buf, len);
+  int st;
+
+  st = mbedtls_ssl_write(&client->ssl, buf, len);
+  if (st < 0)
+    client->sslResult = st;
+
+  return st;
 }
 
 static int readSslPacket(PbClient* client, unsigned char* buf, size_t len)
 {
-  return mbedtls_ssl_read(&client->ssl, buf, len);
+  int st;
+
+  st =  mbedtls_ssl_read(&client->ssl, buf, len);
+  if (st < 0)
+    client->sslResult = st;
+
+  return st;
 }
 
 static int closeSslConnection(PbClient* client)
@@ -285,6 +297,7 @@ int pbConnectSSL(PbClient*            client,
   int    i;
   int    st;
 
+  client->sslResult = 0;
   memset(&hints, '\0', sizeof(hints));
 
   hints.ai_family = PF_UNSPEC;
@@ -337,6 +350,7 @@ int pbConnectSSL(PbClient*            client,
   if (st != 0) {
 
     close(client->sock);
+    client->sslResult = st;
     return PB_MBEDTLS;
   }
 
@@ -344,6 +358,7 @@ int pbConnectSSL(PbClient*            client,
   if (st != 0) {
 
     close(client->sock);
+    client->sslResult = st;
     return PB_MBEDTLS;
   }
 
