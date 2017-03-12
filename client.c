@@ -388,6 +388,21 @@ int pbConnectSSL(PbClient*            client,
 
 #endif
 
+bool pbIsSSL_URL(const char* url)
+{
+  char* ptr;
+  ptr = strchr(url, ':');
+  if (ptr == NULL)
+    return false;
+
+  if (!strncmp(url, "mqtt", ptr - url) || !strncmp(url, "tcp", ptr - url))
+    return false;
+
+  if (!strncmp(url, "mqtts", ptr - url) || !strncmp(url, "ssl", ptr - url))
+    return true;
+
+  return false;
+}
 
 int pbConnectURL(PbClient*            client,
                  const char*          url,

@@ -248,6 +248,11 @@ int pbConnectURL(PbClient*            client,
                  const char*          url,
                  PbConnect*           arg);
 /**
+ * Check if URL will result in SSL/TLS connection.
+ */
+bool pbIsSSL_URL(const char* url);
+
+/**
  * Send PING to broker and wait for response. Used to handle keepalive processing.
  */
 int pbPing(PbClient* client);
