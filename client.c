@@ -448,7 +448,11 @@ int pbConnectURL(PbClient*            client,
   }
 
   if (ssl)
+#if POTATO_TLS
     return pbConnectSSL(client, host, port, arg);
+#else
+    return PB_MBEDTLS;
+#endif
 
   return pbConnect(client, host, port, arg);
 }
