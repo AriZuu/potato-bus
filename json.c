@@ -42,7 +42,7 @@ static JsonNode* deeper(JsonNode* parent)
   JsonContext* context = parent->context;
   int depth = parent - context->nodes;
 
-  if (depth + 1 == MAX_DEPTH) {
+  if (depth + 1 == POTATO_JSON_MAX_DEPTH) {
 
     parent->context->error = true;
     return NULL;
@@ -257,6 +257,10 @@ JsonNode* jsonNext(JsonNode* parent)
 
   restoreBuffer(parent);
   node = deeper(parent);
+
+  if (node == NULL)
+    return NULL;
+
   node->key = NULL;
   node->keyLen = 0;
 
@@ -489,6 +493,9 @@ JsonNode* jsonStartObject(JsonNode* node)
 
     node->values++;
     out = deeper(node);
+    if (out == NULL)
+      return NULL;
+
     ctx->depth++;
   }
    
@@ -515,6 +522,9 @@ JsonNode* jsonStartArray(JsonNode* node)
 
     node->values++;
     out = deeper(node);
+    if (out == NULL)
+      return NULL;
+
     ctx->depth++;
   }
    

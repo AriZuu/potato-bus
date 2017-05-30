@@ -31,12 +31,16 @@
 #ifndef _POTATO_BUS_JSON_H
 #define _POTATO_BUS_JSON_H
 
+#include "potato-cfg.h"
+
 /** @defgroup json potato-bus JSON API
  * Potato-bus includes a simple mallocless JSON parser & generator.
  * @{
  */
 
-#define MAX_DEPTH 4
+#ifndef POTATO_JSON_MAX_DEPTH
+#define POTATO_JSON_MAX_DEPTH 4
+#endif
 
 /**
  * JSON token types.
@@ -77,7 +81,7 @@ typedef struct jsonNode {
 typedef struct jsonContext  {
 
   bool     error;
-  JsonNode nodes[MAX_DEPTH]; 
+  JsonNode nodes[POTATO_JSON_MAX_DEPTH]; 
 
   union {
 
