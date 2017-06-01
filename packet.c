@@ -36,7 +36,7 @@
 
 #include "potato-bus.h"
 
-#define CHECK_SPACE(pkt,n) do { if (pkt->overflow || (pkt->end + n - pkt->buf > PB_BUFSIZE)) { pkt->overflow = true; return -1; } } while (0)
+#define CHECK_SPACE(pkt,n) do { if (pkt->overflow || (pkt->end + n - pkt->buf > POTATO_BUFSIZE)) { pkt->overflow = true; return -1; } } while (0)
 
 void pbDump(PbPacket* pkt)
 {

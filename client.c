@@ -117,7 +117,7 @@ int pbReadPacket(PbClient* client)
     // reserve 1 extra byte at end of message, so
     // it is possible to tack null character at
     // end of payload - just to be C-string friendly.
-    if (ptr + len + 1 - client->packet.buf > PB_BUFSIZE) {
+    if (ptr + len + 1 - client->packet.buf > POTATO_BUFSIZE) {
 
       close(client->sock);
       client->sock = -1;

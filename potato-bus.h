@@ -111,7 +111,9 @@
 /** 
  * Max size of MQ packet buffer.
  */
-#define PB_BUFSIZE 400
+#ifndef POTATO_BUFSIZE
+#define POTATO_BUFSIZE 512
+#endif
 
 /**
  * Data for publish packet.
@@ -170,7 +172,7 @@ typedef struct {
  */
 typedef struct {
   
-  unsigned char buf[PB_BUFSIZE];
+  unsigned char buf[POTATO_BUFSIZE];
   unsigned char* start;
   unsigned char* ptr;
   unsigned char* end;
