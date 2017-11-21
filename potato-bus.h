@@ -41,6 +41,10 @@
 #include "mbedtls/ctr_drbg.h"
 #include "mbedtls/debug.h"
 
+#else
+
+typedef void mbedtls_ssl_config;
+
 #endif
 
 /**
@@ -52,8 +56,10 @@
 /**
  * @mainpage potato-bus - Simple MQTT client for pico]OS
  * <b> Table Of Contents </b>
- * - @ref client
- * - @ref packet
+ * - @ref mqttclient
+ * - @ref mqttpacket
+ * - @ref httpclient
+ * - @ref common
  * - @ref json
  * @section overview Overview
  * This library contains a simple MQTT client implementation for pico]OS, but
@@ -68,8 +74,10 @@
  * For MQTT specification, see http://mqtt.org/documentation
  */
 
-/** @defgroup client   Client API layer */
-/** @defgroup packet   Packet reader/writer API */
+/** @defgroup mqttclient   MQTT client API layer */
+/** @defgroup mqttpacket   MQTT packet reader/writer API */
+/** @defgroup httpclient   Simple HTTP client API */
+/** @defgroup common       Common functions */
 
 /*
  * MQTT packet types.
@@ -95,6 +103,7 @@
  * Return codes.
  */
 
+#define PB_HTTP    -7
 #define PB_BADURL  -6
 #define PB_MBEDTLS -5
 #define PB_TIMEOUT -4
@@ -153,9 +162,7 @@ typedef struct {
   const char* clientId;
   const char* user;
   const char* pass;
-#if POTATO_TLS
-  mbedtls_ssl_config*  sslConf;
-#endif
+  mbedtls_ssl_config* sslConf;
 } PbConnect;
   
 /**
@@ -201,9 +208,103 @@ typedef struct pbClient {
 #endif
 } PbClient;
 
+/**
+ * URL information after it has been parsed.
+ */
+typedef struct {
+  const char* protocol;
+  const char* username;
+  const char* password;
+  const char* host;
+  const char* port;
+  const char* path;
+} PbUrl;
 
 /**
- * @ingroup client
+ * @ingroup common
+ * @{
+ */
+
+/**
+ * Tokenize url into protocol, hostname and path.
+ * Parse also username, password and port number if
+ * they are specified.
+ * 
+ * Note that input string is modified and PbUrl 
+ * structure contains pointers to it.
+ */
+int pbUrlTok(PbUrl* url, char* urlString);
+
+/**
+ * Connect socket to URL.
+ */
+int pbConnectSocket(PbClient*            client,
+                    const PbUrl*         url,
+                    mbedtls_ssl_config*  sslConf);
+
+/**
+ * Disconnect socket.
+ */
+int pbDisconnectSocket(PbClient* client);
+
+/**
+ * Write dump of packet to stdout. Useful for debugging.
+ */
+void pbDump(PbPacket* pkt);
+
+/**
+ * Write a byte to packet buffer.
+ */
+int pbWriteByte(PbPacket* pkt, uint8_t b);
+
+/**
+ * Read a byte from packet buffer.
+ */
+uint8_t pbReadByte(PbPacket* pkt);
+
+/**
+ * Get length of packet.
+ */
+int pbLength(PbPacket* pkt);
+
+/**
+ * Initialize packet. Must be called before writing/reading.
+ */
+void pbInitPacket(PbPacket* pkt);
+
+/**
+ * Calculate remaining buffer space.
+ */
+int pbRoomLeft(PbPacket* pkt);
+
+/**
+ * Check if packet has room for n more bytes.
+ */
+bool pbHasRoom(PbPacket* pkt, int n);
+
+/**
+ * Return failure if no room in packet.
+ */
+#define PB_CHECK_SPACE(pkt,n) do { if (!pbHasRoom(pkt, n)) return -1; } while (0)
+
+/** @} */
+
+/**
+ * @ingroup httpclient
+ * @{
+ */
+
+/**
+ * Perform HTTP get.
+ */
+int pbGet(PbClient*            client,
+          const char*          url,
+          mbedtls_ssl_config*  sslConf);
+
+/** @} */
+
+/**
+ * @ingroup mqttclient
  * @{
  */
 
@@ -224,18 +325,6 @@ int pbWritePacket(PbClient* client, PbPacket* pkt);
 int pbReadPacket(PbClient* client);
 
 /**
- * Connect to MQTT broker and wait for it to acknowledge new connection.
- */
-int pbConnect(PbClient* client, const char* host, const char* service, PbConnect* arg);
-
-/**
- * Connect to MQTT broker using SSL/TLS and wait for it to acknowledge new connection.
- */
-int pbConnectSSL(PbClient*            client,
-                 const char*          host,
-                 const char*          service,
-                 PbConnect*           arg);
-/**
  * Connect to MQTT broker using URL and wait for it to acknowledge new connection.
  * URL should be like
  *   mqtt://server[:port],
@@ -246,9 +335,9 @@ int pbConnectSSL(PbClient*            client,
  * mqtt: is alias for tcp: and mqtts: is alias for ssl:.
  * Default port is 1883 for tcp and 8883 for ssl.
  */
-int pbConnectURL(PbClient*            client,
-                 const char*          url,
-                 PbConnect*           arg);
+int pbConnect(PbClient*            client,
+              const char*          url,
+              PbConnect*           arg);
 /**
  * Check if URL will result in SSL/TLS connection.
  */
@@ -290,29 +379,14 @@ int pbWaitResponse(PbClient* client, int expect);
 /** @} */
 
 /**
- * @ingroup packet
+ * @ingroup mqttpacket
  * @{
  */
-
-/**
- * Write dump of packet to stdout. Useful for debugging.
- */
-void pbDump(PbPacket* pkt);
 
 /**
  * Convert packet type to string.
  */
 const char* pbToString(PbPacket* pkt);
-
-/**
- * Write a byte to packet buffer.
- */
-int pbWriteByte(PbPacket* pkt, uint8_t b);
-
-/**
- * Read a byte from packet buffer.
- */
-uint8_t pbReadByte(PbPacket* pkt);
 
 /**
  * Write integer to packet buffer.
@@ -385,16 +459,6 @@ int pbWritePing(PbPacket* pkt);
  * Write disconnect packet.
  */
 int pbWriteDisconnect(PbPacket* pkt);
-
-/**
- * Get length of packet.
- */
-int pbLength(PbPacket* pkt);
-
-/**
- * Initialize packet. Must be called before writing/reading.
- */
-void pbInitPacket(PbPacket* pkt);
 
 /** @} */
 

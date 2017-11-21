@@ -39,8 +39,11 @@ include $(RELROOT)make/common.mak
 
 TARGET = potato-bus
 
-SRC_TXT =	packet.c \
+SRC_TXT =	mqttpacket.c \
+		mqttclient.c \
+		httpclient.c \
 		client.c \
+		packet.c \
 		json.c \
 		microjson/mjson.c
 
