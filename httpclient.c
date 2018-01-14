@@ -150,7 +150,7 @@ int pbGet(PbClient*            client,
         }
 
         *ptr = '\0';
-        if (strcmp(hdr, "HTTP/1.1")) {
+        if (strcmp(hdr, "HTTP/1.1") && strcmp(hdr, "HTTP/1.0")) {
 
           st = PB_HTTP;
           break;
