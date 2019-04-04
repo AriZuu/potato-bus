@@ -39,7 +39,9 @@ set(SRC
     microjson/mjson.c)
 
 add_peer_directory(${PICOOS_DIR})
+if(POTATO_BUS_TLS)
 add_peer_directory(../picoos-mbedtls)
+endif()
 add_peer_directory(../picoos-lwip)
 add_peer_directory(../picoos-micro)
 
@@ -48,4 +50,7 @@ add_library(potato-bus STATIC ${SRC})
 target_include_directories(potato-bus
   PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} microjson)
 
-target_link_libraries(potato-bus picoos-mbedtls picoos-lwip picoos-micro picoos)
+target_link_libraries(potato-bus picoos-lwip picoos-micro picoos)
+if(POTATO_BUS_TLS)
+target_link_libraries(potato-bus picoos-mbedtls)
+endif()
